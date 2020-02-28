@@ -2,7 +2,7 @@ import { LocalizeMetaDef, NstackConfigDef } from "./types";
 export declare class NstackInstance {
     readonly config: NstackConfigDef;
     private instance;
-    availableLanguages: string[];
+    language: string;
     constructor(config: NstackConfigDef);
     appOpen(): Promise<{
         translation: import("./types").LocalizeDataDef | null;

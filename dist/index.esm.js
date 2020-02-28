@@ -113,15 +113,20 @@ const RESOURCE_URL = "/content/localize/resources/";
 class NstackInstance {
     constructor(config) {
         this.config = config;
-        this.availableLanguages = [];
         this.config = Object.assign({ url: BASE_URL, platform: "web", dev: false, test: false }, config);
+        const currentTranslationMeta = getTranslationMeta();
+        // Get last used language
+        // otherwise fallback to initial language
+        this.language =
+            (currentTranslationMeta && currentTranslationMeta.language.locale) ||
+                this.config.initialLanguage;
         this.instance = axios.create({
             baseURL: this.config.url,
             headers: {
                 "X-Application-Id": this.config.appId,
                 "X-Rest-Api-Key": this.config.apiKey,
                 "N-Meta": this.config.meta,
-                "Accept-Language": this.config.language,
+                "Accept-Language": this.language,
                 "Content-Type": "application/json"
             }
         });
@@ -139,7 +144,7 @@ class NstackInstance {
                     guid: getUUID()
                 };
                 // Only set the last_updated, if the existing locale and the requested one are the same
-                if ((existingTranslationMeta === null || existingTranslationMeta === void 0 ? void 0 : existingTranslationMeta.language.locale) === this.config.language) {
+                if ((existingTranslationMeta === null || existingTranslationMeta === void 0 ? void 0 : existingTranslationMeta.language.locale) === this.language) {
                     apiBody.last_updated = existingTranslationMeta === null || existingTranslationMeta === void 0 ? void 0 : existingTranslationMeta.last_updated_at;
                 }
                 // Execute api call
@@ -171,7 +176,7 @@ class NstackInstance {
         }))();
     }
     set setLanguageByString(language) {
-        this.config.language = language;
+        this.language = language;
         this.instance.defaults.headers["Accept-Language"] = language;
     }
 }

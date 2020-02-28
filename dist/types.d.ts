@@ -9,8 +9,8 @@ export declare type NstackConfigDef = {
     version?: string;
     /** eg: ios/android/web (Default is web) */
     platform?: "web" | "ios" | "android";
-    /** eg: da-DK */
-    language: string;
+    /** Initial language eg: da-DK, language stored in localStorage will take priority */
+    initialLanguage: string;
     /**  Meta eg: web;development */
     meta: string;
     /** if true, bypass publishes and only use newest resource (set of key/values) */

@@ -11,10 +11,9 @@ import { BASE_URL, RESOURCE_URL, OPEN_URL } from "./constants";
 
 export class NstackInstance {
   private instance: AxiosInstance;
-  public availableLanguages: string[];
+  public language: string;
 
   constructor(public readonly config: NstackConfigDef) {
-    this.availableLanguages = []
     this.config = {
       url: BASE_URL,
       platform: "web",
@@ -22,17 +21,24 @@ export class NstackInstance {
       test: false,
       ...config
     };
+
+    const currentTranslationMeta = getTranslationMeta();
+    // Get last used language
+    // otherwise fallback to initial language
+    this.language =
+      (currentTranslationMeta && currentTranslationMeta.language.locale) ||
+      this.config.initialLanguage;
+
     this.instance = axios.create({
       baseURL: this.config.url,
       headers: {
         "X-Application-Id": this.config.appId,
         "X-Rest-Api-Key": this.config.apiKey,
         "N-Meta": this.config.meta,
-        "Accept-Language": this.config.language,
+        "Accept-Language": this.language,
         "Content-Type": "application/json"
       }
     });
-    
   }
 
   public appOpen() {
@@ -49,7 +55,7 @@ export class NstackInstance {
           guid: getUUID()
         };
         // Only set the last_updated, if the existing locale and the requested one are the same
-        if (existingTranslationMeta?.language.locale === this.config.language) {
+        if (existingTranslationMeta?.language.locale === this.language) {
           apiBody.last_updated = existingTranslationMeta?.last_updated_at;
         }
 
@@ -73,7 +79,11 @@ export class NstackInstance {
             );
             const newTranslation = resourceResponse.data.data;
 
-            storeTranslation(newTranslationMeta, newTranslation, availableLanguages);
+            storeTranslation(
+              newTranslationMeta,
+              newTranslation,
+              availableLanguages
+            );
           }
         }
       } catch (error) {
@@ -91,7 +101,7 @@ export class NstackInstance {
   }
 
   public set setLanguageByString(language: string) {
-    this.config.language = language;
+    this.language = language;
     this.instance.defaults.headers["Accept-Language"] = language;
   }
 }
