@@ -1,0 +1,25 @@
+{
+  "name": "@nstack-io/javascript-sdk",
+  "version": "1.0.0",
+  "description": "javascript sdk for nstack",
+  "license": "MIT",
+  "main": "dist/index.cjs.js",
+  "module": "dist/index.esm.js",
+  "devDependencies": {
+    "rollup": "^1.31.1",
+    "rollup-plugin-delete": "^1.2.0",
+    "rollup-plugin-typescript2": "^0.26.0",
+    "typescript": "^3.8.2"
+  },
+  "scripts": {
+    "build": "rollup -c",
+    "build-watch": "rollup -c -w"
+  },
+  "dependencies": {
+    "axios": "^0.19.2"
+  },
+  "files": [
+    "dist"
+  ],
+  "typings": "dist/index.d.ts"
+}
