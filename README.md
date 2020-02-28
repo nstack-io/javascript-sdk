@@ -1,4 +1,4 @@
-# javascript-sdk
+# NSTACK javascript-sdk
 
 ## Install
 
