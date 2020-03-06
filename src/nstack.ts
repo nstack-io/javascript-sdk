@@ -1,13 +1,24 @@
 import axios, { AxiosInstance } from "axios";
 import {
-  getUUID,
   getTranslationMeta,
   storeTranslation,
   getTranslation,
   getAvailableLanguages
-} from "./helper";
-import { LocalizeMetaDef, NstackConfigDef, NstackOpenBodyDef } from "./types";
-import { BASE_URL, RESOURCE_URL, OPEN_URL } from "./constants";
+} from "./helpers/translationHelper";
+import { getUUID } from "./helpers/utilHelper";
+import {
+  LocalizeMetaDef,
+  NstackConfigDef,
+  NstackOpenBodyDef
+} from "./types/types";
+import {
+  BASE_URL,
+  RESOURCE_URL,
+  OPEN_URL,
+  GEO_COUNTRIES_URL
+} from "./constants";
+import { getGeoCountries, storeGeoCountries } from "./helpers/geographyHelper";
+import { GeographyCountryDef } from "./types/geoTypes";
 
 export class NstackInstance {
   private instance: AxiosInstance;
@@ -103,5 +114,32 @@ export class NstackInstance {
   public set setLanguageByString(language: string) {
     this.language = language;
     this.instance.defaults.headers["Accept-Language"] = language;
+  }
+
+  /** Get a list of all countries in the world */
+  public geographyCountries() {
+    return (async () => {
+      try {
+        // Check if countries are already fetched
+        const existingCountries = getGeoCountries();
+        // If not, then call api to fetch countries
+        if (!existingCountries) {
+          // Execute api call
+          const response = await this.instance.get(GEO_COUNTRIES_URL);
+
+          const geoCountriesList = response.data.data as GeographyCountryDef[];
+          if (geoCountriesList && geoCountriesList.length) {
+            storeGeoCountries(geoCountriesList);
+          }
+        }
+      } catch (error) {
+        throw error;
+      } finally {
+        // Return list of countries that is stored in localStorage even if api fails
+        return {
+          countries: getGeoCountries() || [],
+        };
+      }
+    })();
   }
 }
