@@ -117,7 +117,7 @@ export class NstackInstance {
   }
 
   /** Get a list of all countries in the world */
-  public geographyCountries() {
+  public getGeographyCountries() {
     return (async () => {
       try {
         // Check if countries are already fetched

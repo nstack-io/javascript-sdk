@@ -25,29 +25,9 @@ function __awaiter(thisArg, _arguments, P, generator) {
 }
 
 /** Keys for localstorage */
-const UUID_KEY = "nstack-uuid";
 const META_KEY = "nstack-meta";
 const TRANSLATION_KEY = "nstack-translation";
 const AVAILABLE_LANGUAGES_KEY = "nstack-available-languages";
-/** Get the UUID from localStorage or generate new one */
-const getUUID = () => {
-    try {
-        // try to get the uuid
-        let uuid = localStorage.getItem(UUID_KEY);
-        // if it doesn't exist or is not the expected length
-        // then generate a new one
-        if (uuid == null || uuid.length !== 36) {
-            uuid = uuidv4();
-            localStorage.setItem(UUID_KEY, uuid);
-        }
-        return uuid;
-    }
-    catch (e) {
-        // localStorage did not work for some reason
-        // fallback to just return a newly generated UUID
-        return uuidv4();
-    }
-};
 /** Stores the translation meta and data in local storage */
 const storeTranslation = (translationMeta, translation, availableLanguages) => {
     try {
@@ -99,6 +79,27 @@ const getAvailableLanguages = () => {
         throw e;
     }
 };
+
+const UUID_KEY = "nstack-uuid";
+/** Get the UUID from localStorage or generate new one */
+const getUUID = () => {
+    try {
+        // try to get the uuid
+        let uuid = localStorage.getItem(UUID_KEY);
+        // if it doesn't exist or is not the expected length
+        // then generate a new one
+        if (uuid == null || uuid.length !== 36) {
+            uuid = uuidv4();
+            localStorage.setItem(UUID_KEY, uuid);
+        }
+        return uuid;
+    }
+    catch (e) {
+        // localStorage did not work for some reason
+        // fallback to just return a newly generated UUID
+        return uuidv4();
+    }
+};
 /** Generate UUID for nstack */
 const uuidv4 = () => {
     return ("" + 1e7 + -1e3 + -4e3 + -8e3 + -1e11).replace(/1|0/g, function () {
@@ -109,6 +110,32 @@ const uuidv4 = () => {
 const BASE_URL = "https://nstack.io/api/v2";
 const OPEN_URL = "/open";
 const RESOURCE_URL = "/content/localize/resources/";
+const GEO_COUNTRIES_URL = "/geographic/countries";
+
+/** Keys for localstorage */
+const COUNTRIES_KEY = "nstack-geo-countries";
+/** Stores the translation meta and data in local storage */
+const storeGeoCountries = (countries) => {
+    try {
+        localStorage.setItem(COUNTRIES_KEY, JSON.stringify(countries));
+    }
+    catch (e) {
+        throw e;
+    }
+};
+/** Get the translation from local storage */
+const getGeoCountries = () => {
+    try {
+        const translation = localStorage.getItem(COUNTRIES_KEY);
+        if (translation != null) {
+            return JSON.parse(translation);
+        }
+        return null;
+    }
+    catch (e) {
+        throw e;
+    }
+};
 
 class NstackInstance {
     constructor(config) {
@@ -178,6 +205,33 @@ class NstackInstance {
     set setLanguageByString(language) {
         this.language = language;
         this.instance.defaults.headers["Accept-Language"] = language;
+    }
+    /** Get a list of all countries in the world */
+    getGeographyCountries() {
+        return (() => __awaiter(this, void 0, void 0, function* () {
+            try {
+                // Check if countries are already fetched
+                const existingCountries = getGeoCountries();
+                // If not, then call api to fetch countries
+                if (!existingCountries) {
+                    // Execute api call
+                    const response = yield this.instance.get(GEO_COUNTRIES_URL);
+                    const geoCountriesList = response.data.data;
+                    if (geoCountriesList && geoCountriesList.length) {
+                        storeGeoCountries(geoCountriesList);
+                    }
+                }
+            }
+            catch (error) {
+                throw error;
+            }
+            finally {
+                // Return list of countries that is stored in localStorage even if api fails
+                return {
+                    countries: getGeoCountries() || [],
+                };
+            }
+        }))();
     }
 }
 
