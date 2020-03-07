@@ -1,6 +1,6 @@
 {
   "name": "@nstack-io/javascript-sdk",
-  "version": "1.0.0",
+  "version": "0.3",
   "description": "javascript sdk for nstack",
   "license": "MIT",
   "main": "dist/index.cjs.js",
