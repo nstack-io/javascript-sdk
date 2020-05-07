@@ -2,9 +2,13 @@
 
 ## Install
 
+Install the latest version like this:
+
 ```console
-yarn add nstack-io/javascript-sdk
+yarn add nstack-io/javascript-sdk#v0.3
 ```
+
+> Important to specify version for now, until we add the package to NPM or Github Packages
 
 ## How to use
 
