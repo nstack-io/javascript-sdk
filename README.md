@@ -1,4 +1,11 @@
-# Nstack javascript-sdk
+# NStack JavaScript-SDK
+
+[![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
+
+
+## What is NStack?
+
+See the [NStack documentation](https://nstack-io.github.io/docs/) for more information about NStack.
 
 ## Install
 
@@ -8,7 +15,7 @@ Install the latest version like this:
 yarn add nstack-io/javascript-sdk#v0.3
 ```
 
-> Important to specify version for now, until we add the package to NPM or Github Packages
+> Important to specify version like this for now, until we publish the package to NPM or Github Packages
 
 ## How to use
 
@@ -46,7 +53,7 @@ async () => {
 
 ### Change Language
 
-First set the new language in the instance, and then call the `appOen` again to fetch translation.
+First set the new language in the instance, and then call the `appOpen` again to fetch translation.
 
 ```tsx
 nstackClient.setLanguageByString = "fr-FR";
@@ -74,3 +81,6 @@ All the types are exported and can be imported in your TypeScript project like t
 ```tsx
 import { LanguageDef } from "@nstack-io/javascript-sdk/dist/types";
 ```
+
+# License
+NStack JavaScriptSDK is available under the MIT license. See the [LICENSE](./LICENSE) file for more info.
