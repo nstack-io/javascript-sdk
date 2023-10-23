@@ -1,29 +1,12 @@
 import { GeographyCountryDef } from "../types/geoTypes";
 
-/** Keys for localstorage */
-
-const COUNTRIES_KEY = "nstack-geo-countries";
+/** Keys for LS */
 
 /** Stores the translation meta and data in local storage */
-export const storeGeoCountries = (
-  countries: GeographyCountryDef[],
-) => {
-  try {
-    localStorage.setItem(COUNTRIES_KEY, JSON.stringify(countries));
-  } catch (e) {
-    throw e;
-  }
-};
+export const storeGeoCountries = (countries: GeographyCountryDef[]) => {};
 
 /** Get the translation from local storage */
 export const getGeoCountries = () => {
-  try {
-    const translation = localStorage.getItem(COUNTRIES_KEY);
-    if (translation != null) {
-      return JSON.parse(translation) as GeographyCountryDef[];
-    }
-    return null;
-  } catch (e) {
-    throw e;
-  }
+  const translation = "en";
+  return JSON.parse(translation) as GeographyCountryDef[];
 };

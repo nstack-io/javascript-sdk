@@ -1,21 +1,25 @@
 import axios, { AxiosInstance } from "axios";
 import {
+  getAvailableLanguages,
+  getTranslation,
   getTranslationMeta,
   storeTranslation,
-  getTranslation,
-  getAvailableLanguages
 } from "./helpers/translationHelper";
 import { getUUID } from "./helpers/utilHelper";
 import {
+  LocaleRes,
   LocalizeMetaDef,
   NstackConfigDef,
-  NstackOpenBodyDef
+  NstackOpenBodyDef,
+  OpenRes,
+  TranslationWithMeta,
 } from "./types/types";
 import {
   BASE_URL,
-  RESOURCE_URL,
+  GEO_COUNTRIES_URL,
   OPEN_URL,
-  GEO_COUNTRIES_URL
+  RESOURCE_URL,
+  TranslationKeys,
 } from "./constants";
 import { getGeoCountries, storeGeoCountries } from "./helpers/geographyHelper";
 import { GeographyCountryDef } from "./types/geoTypes";
@@ -30,116 +34,256 @@ export class NstackInstance {
       platform: "web",
       dev: false,
       test: false,
-      ...config
+      ...config,
     };
 
-    const currentTranslationMeta = getTranslationMeta();
+    // Assign initialLanguage to language
+    this.language = this.config.initialLanguage;
+
     // Get last used language
     // otherwise fallback to initial language
-    this.language =
-      (currentTranslationMeta && currentTranslationMeta.language.locale) ||
-      this.config.initialLanguage;
-
     this.instance = axios.create({
       baseURL: this.config.url,
       headers: {
         "X-Application-Id": this.config.appId,
         "X-Rest-Api-Key": this.config.apiKey,
         "N-Meta": this.config.meta,
-        "Accept-Language": this.language,
-        "Content-Type": "application/json"
-      }
+        "Accept-Language": this.config.initialLanguage,
+        "Content-Type": "application/json",
+      },
     });
   }
 
-  public appOpen() {
-    return (async () => {
-      try {
-        // Get the translation meta with the last updated date
-        const existingTranslationMeta = getTranslationMeta();
+  private generateApiBody = (
+    last_updated: string | 0 = 0,
+  ): NstackOpenBodyDef => {
+    return {
+      platform: this.config.platform,
+      version: this.config.version,
+      dev: this.config.dev,
+      test: this.config.test,
+      guid: getUUID(),
+      last_updated,
+    };
+  };
 
-        const apiBody: NstackOpenBodyDef = {
-          platform: this.config.platform,
-          version: this.config.version,
-          dev: this.config.dev,
-          test: this.config.test,
-          guid: getUUID()
-        };
-        // Only set the last_updated, if the existing locale and the requested one are the same
-        if (existingTranslationMeta?.language.locale === this.language) {
-          apiBody.last_updated = existingTranslationMeta?.last_updated_at;
-        }
+  private fetchOpenLocalizeData = async ({
+    acceptLanguage,
+    last_updated,
+  }: {
+    acceptLanguage?: string;
+    last_updated?: string;
+  }): Promise<Array<LocalizeMetaDef> | undefined> => {
+    try {
+      const { data: { data } = {} } = await this.instance.post<OpenRes>(
+        OPEN_URL,
+        this.generateApiBody(last_updated),
+        {
+          ...(acceptLanguage && {
+            headers: {
+              "Accept-Language": acceptLanguage,
+            },
+          }),
+        },
+      );
 
-        // Execute api call
-        const response = await this.instance.post(OPEN_URL, apiBody);
+      return data?.localize;
+    } catch {
+      this.errorHandler();
+    }
+  };
 
-        const localizeList = response.data.data.localize as LocalizeMetaDef[];
-        if (localizeList && localizeList.length) {
-          const availableLanguages = localizeList.map(
-            localization => localization.language
+  private fetchTranslationData = async (
+    localeId: number,
+  ): Promise<LocaleRes | undefined> => {
+    try {
+      const resourceResponse = await this.instance.get<LocaleRes>(
+        `${RESOURCE_URL}${localeId}`,
+      );
+
+      return resourceResponse.data;
+    } catch {
+      this.errorHandler();
+    }
+  };
+
+  public async appOpen() {
+    try {
+      // Get the translation meta with the last updated date
+      const existingTranslationMeta = await getTranslationMeta();
+
+      // Only set the last_updated, if `existingTranslationMeta` last updated was saved
+      // Execute api call
+      const localizeList = await this.fetchOpenLocalizeData({
+        acceptLanguage:
+          existingTranslationMeta?.locale || this.config.initialLanguage,
+        last_updated: existingTranslationMeta?.last_updated_at,
+      });
+
+      if (localizeList && localizeList.length > 0) {
+        const availableLanguages = localizeList.map(
+          (localization) => localization.language,
+        );
+        // Find the localization that should be updated and fits with the requested locale
+        const newTranslationMeta = localizeList.find((localization) => {
+          return (
+            localization.should_update &&
+            (localization.language.locale === existingTranslationMeta?.locale ||
+              localization.language.is_best_fit)
           );
-          // Find the localization that should be updated and fits with the requested locale
-          const newTranslationMeta = localizeList.find(
-            localization =>
-              localization.should_update && localization.language.is_best_fit
+        });
+
+        if (newTranslationMeta) {
+          const newTranslation = await this.fetchTranslationData(
+            newTranslationMeta.id,
           );
 
-          if (newTranslationMeta) {
-            const resourceResponse = await this.instance.get(
-              `${RESOURCE_URL}${newTranslationMeta.id}`
-            );
-            const newTranslation = resourceResponse.data.data;
+          // TODO: check for undefined
 
-            storeTranslation(
-              newTranslationMeta,
-              newTranslation,
-              availableLanguages
-            );
-          }
+          await storeTranslation(TranslationKeys.META_KEY, {
+            locale: newTranslationMeta.language.locale,
+            // override `last_updated_at` as returned timestamp from api '/open' => dates match `should_update: true`
+            last_updated_at: new Date().toISOString(),
+          });
+
+          if (!newTranslation) return;
+
+          await storeTranslation(
+            TranslationKeys.TRANSLATION_KEY,
+            newTranslation.data,
+          );
+          await storeTranslation(
+            TranslationKeys.AVAILABLE_LANGUAGES_KEY,
+            availableLanguages,
+          );
         }
-      } catch (error) {
-        throw error;
-      } finally {
-        // Return translation that is stored in localStorage even if api fails
-        // Translation and meta can be null
-        return {
-          translation: getTranslation(),
-          translationMeta: getTranslationMeta(),
-          availableLanguages: getAvailableLanguages()
+      }
+    } catch (error) {
+      console.error("error:", error);
+      throw error;
+    }
+
+    return {
+      translation: await getTranslation(),
+      translationMeta: await getTranslationMeta(),
+      availableLanguages: await getAvailableLanguages(),
+    };
+  }
+
+  public async shouldUpdateTranslations(userLocale: string) {
+    const existingTranslationMeta = await getTranslationMeta();
+
+    return existingTranslationMeta?.locale !== userLocale;
+  }
+
+  public setLanguageByString(locale: string) {
+    this.language = locale;
+    this.instance.defaults.headers["Accept-Language"] = locale;
+  }
+
+  public async getCachedTranslations() {
+    return {
+      translation: await getTranslation(),
+      translationMeta: await getTranslationMeta(),
+      availableLanguages: await getAvailableLanguages(),
+    };
+  }
+
+  public async changeLanguage(locale: string) {
+    this.language = locale;
+    this.instance.defaults.headers["Accept-Language"] = locale;
+
+    await storeTranslation(TranslationKeys.META_KEY, {
+      locale: locale,
+    });
+  }
+
+  private errorHandler = (err: unknown = "") => {
+    if (typeof err === "string")
+      console.error(`we encountered err: ${err} fetching the data`);
+  };
+
+  private fetchNewTranslation = async ({
+    translationMetaId,
+    useCachedMeta = true,
+  }: {
+    translationMetaId: number;
+    useCachedMeta?: boolean;
+  }): Promise<TranslationWithMeta> => {
+    let headers = {};
+
+    if (useCachedMeta) {
+      const cashedMeta = await getTranslationMeta();
+      if (cashedMeta) {
+        headers = {
+          "Accept-Language": cashedMeta.locale,
         };
       }
-    })();
-  }
+    } else {
+      headers = {
+        "Accept-Language": "en-GB",
+      };
+    }
 
-  public set setLanguageByString(language: string) {
-    this.language = language;
-    this.instance.defaults.headers["Accept-Language"] = language;
-  }
+    const resourceResponse = await this.instance.get<TranslationWithMeta>(
+      `${RESOURCE_URL}${translationMetaId}`,
+      {
+        headers,
+      },
+    );
+
+    return resourceResponse.data;
+  };
+
+  public generateLocalizeFiles = async () => {
+    return (async () => {
+      try {
+        const localizeList = await this.fetchOpenLocalizeData({});
+
+        if (!localizeList) return this.errorHandler();
+
+        const translations: Array<TranslationWithMeta | undefined> =
+          await Promise.all(
+            localizeList.map(async (locale) => {
+              try {
+                const res = await this.fetchNewTranslation({
+                  translationMetaId: locale.id,
+                  useCachedMeta: false,
+                });
+                return { ...res, meta: locale };
+              } catch (error) {
+                console.error(error, ": ===:err");
+              }
+            }),
+          );
+
+        return { translations, localizeList };
+      } catch (error) {
+        this.errorHandler(error);
+        return;
+      }
+    })();
+  };
 
   /** Get a list of all countries in the world */
   public getGeographyCountries() {
     return (async () => {
-      try {
-        // Check if countries are already fetched
-        const existingCountries = getGeoCountries();
-        // If not, then call api to fetch countries
-        if (!existingCountries) {
-          // Execute api call
-          const response = await this.instance.get(GEO_COUNTRIES_URL);
+      const existingCountries = getGeoCountries();
+      // If not, then call api to fetch countries
+      if (!existingCountries) {
+        // Execute api call
+        const response = await this.instance.get<{ data: unknown }>(
+          GEO_COUNTRIES_URL,
+        );
 
-          const geoCountriesList = response.data.data as GeographyCountryDef[];
-          if (geoCountriesList && geoCountriesList.length) {
-            storeGeoCountries(geoCountriesList);
-          }
+        const geoCountriesList = response.data.data as GeographyCountryDef[];
+        if (geoCountriesList && geoCountriesList.length > 0) {
+          storeGeoCountries(geoCountriesList);
         }
-      } catch (error) {
-        throw error;
-      } finally {
-        // Return list of countries that is stored in localStorage even if api fails
-        return {
-          countries: getGeoCountries() || [],
-        };
       }
+      return {
+        countries: getGeoCountries() ?? [],
+      };
     })();
   }
 }

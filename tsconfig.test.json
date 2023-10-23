@@ -1,7 +1,5 @@
 {
   "compilerOptions": {
-    "rootDir": "src",
-    "outDir": "./dist",
     "strict": true,
     "target": "ESNext",
     "sourceMap": true,
@@ -15,8 +13,12 @@
     "declaration": true,
     "typeRoots": ["src/types", "node_modules/@types"],
     "forceConsistentCasingInFileNames": true,
-    "strictNullChecks": true
+    "strictNullChecks": true,
+    "allowJs": true,
+    "noEmit": true,
+    "allowSyntheticDefaultImports": true,
+    "baseUrl": "./"
   },
-  "include": ["src"],
-  "exclude": ["../dist", "./node_modules", "__mocks__/**/*.*"]
+  "include": ["__tests__/**/*.ts", "src/**/*.ts", "./*.ts"],
+  "exclude": ["./dist", "./node_modules"]
 }

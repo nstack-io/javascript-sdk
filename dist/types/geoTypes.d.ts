@@ -1,4 +1,4 @@
-export declare type GeographyCountryDef = {
+export type GeographyCountryDef = {
     id: number;
     code: string;
     code_iso: string;

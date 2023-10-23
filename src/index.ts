@@ -1,3 +1,1 @@
-import { NstackInstance } from "./nstack";
-
-export { NstackInstance };
+export { NstackInstance } from "./nstack";
