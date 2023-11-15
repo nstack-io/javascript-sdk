@@ -1,0 +1,5 @@
+.eslintrc.cjs
+lint-staged.config.js
+dist/**/*
+rollup.config.mjs
+commitlint.config.js

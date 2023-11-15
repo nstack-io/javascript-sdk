@@ -1,9 +1,8 @@
-import { LocalizeMetaDef, LocalizeDataDef, LanguageDef } from "../types/types";
-/** Stores the translation meta and data in local storage */
-export declare const storeTranslation: (translationMeta: LocalizeMetaDef, translation: LocalizeDataDef, availableLanguages: LanguageDef[]) => void;
-/** Get the translation from local storage */
-export declare const getTranslation: () => LocalizeDataDef | null;
-/** Get the translation meta data, such as locale, last updated, from local storage */
-export declare const getTranslationMeta: () => LocalizeMetaDef | null;
-/** Get the available languages */
-export declare const getAvailableLanguages: () => LanguageDef[];
+import { TranslationKeys } from "@/constants";
+import { LanguageDef, LocalizeDataDef, LocalizeMetaDef, SelectedLocale } from "@/types/types";
+/** Get the translation from persisted data */
+export declare const getTranslation: () => Promise<LocalizeDataDef | undefined>;
+/** Get the translation meta data, such as locale, last updated, from persisted data */
+export declare const getTranslationMeta: () => Promise<SelectedLocale | undefined>;
+export declare const getAvailableLanguages: () => Promise<LocalizeMetaDef | undefined>;
+export declare const storeTranslation: (key: TranslationKeys, payload: SelectedLocale | LocalizeDataDef | LanguageDef[]) => Promise<void>;
